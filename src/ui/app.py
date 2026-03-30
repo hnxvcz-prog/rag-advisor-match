@@ -22,39 +22,44 @@ def load_system():
     # Attempt to load processed JSONs if they exist, otherwise initialize
     processed_dir = Path("data/processed")
     docs = []
-    if processed_dir.exists() and any(processed_dir.iterdir()):
-        for fpath in processed_dir.glob("*.json"):
-            if fpath.is_file():
+    
+    # We add a print statement to see what's happening in logs
+    if processed_dir.exists():
+        files = list(processed_dir.glob("*.json"))
+        # Filter out any lingering temp files or non-json
+        for fpath in files:
+            try:
                 with open(fpath, "r", encoding="utf-8") as f:
                     data = json.load(f)
                     docs.append(AdvisorDocument(**data))
+            except Exception as e:
+                print(f"Error loading {fpath}: {e}")
     
-    # If no processed data, try running document parser
+    # If no processed data or we want to force re-parse
     if not docs:
-        st.info("First run detected. Parsing raw Word files...")
+        st.info("Parsing raw Word files...")
         parser = DocumentParser()
         docs = parser.process_all()
         if not docs:
-            st.error("No Word documents found in data/raw/. Please add `.docx` files.")
-            return None, None, None, None
+            st.error("No documents found.")
+            return None, None, None, 0
             
-    # Init Indexer
     indexer = Indexer()
     indexer.add_documents(docs)
     
-    # Init Pipeline
     query_parser = QueryParser()
     matcher = Matcher(indexer)
     generator = RationaleGenerator()
     
     return query_parser, matcher, generator, len(docs)
 
-st.title("🤝 RAG Advisor Matching MVP")
+st.title("🤝 RAG Advisor Matching MVP v1.1")
+st.caption("Last Updated: 2026-03-30")
 
 query_parser, matcher, generator, docs_count = load_system()
 
 if docs_count:
-    st.success(f"System Ready. Indexed **{docs_count}** Advisor Documents.")
+    st.success(f"System Ready. Indexed **{docs_count}** Advisor Documents from `data/processed/`.")
     
     query = st.text_input("描述您的理財需求 (Describe your financial needs):", placeholder="範例：我在尋找一位能為高資產客群進行退休規劃，且溝通風格溫和的理專")
     
