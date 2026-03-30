@@ -4,6 +4,8 @@ from pathlib import Path
 from typing import List, Dict
 
 import docx
+from dotenv import load_dotenv
+load_dotenv()
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import PydanticOutputParser
