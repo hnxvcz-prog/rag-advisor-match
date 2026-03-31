@@ -32,7 +32,10 @@ class Indexer:
         if not self.documents:
             return []
             
-        q_vec = self.embeddings.embed_query(query)
+        # Anchor the query to prevent semantic drift into generic/non-financial space
+        anchored_query = query + " (情境錨定：尋找金融理財顧問、財富管理、專業投資諮詢與客戶服務)"
+        
+        q_vec = self.embeddings.embed_query(anchored_query)
         q_np = np.array([q_vec], dtype=np.float32)
         faiss.normalize_L2(q_np)
         

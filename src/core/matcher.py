@@ -29,7 +29,7 @@ class Matcher:
                 matched += 1
                 
         if total_conditions == 0:
-            return 1.0 # If user asks nothing structured, don't penalize structured score
+            return 0.0 # If user asks nothing structured, don't award any bonus
             
         return matched / total_conditions
 
