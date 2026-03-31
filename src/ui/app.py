@@ -53,11 +53,11 @@ def load_system(version_tag: str):
     
     return query_parser, matcher, generator, len(docs)
 
-st.title("🤝 RAG 理專智能媒合系統 v1.6")
-st.caption("更新：全系統純中文環境設定、介面與防呆機制")
+st.title("🤝 RAG 理專智能媒合系統 v1.7")
+st.caption("更新：好友推薦模式！口語化與感性解說。")
 
 # We pass a version string to force-invalidate st.cache_resource if we update it
-query_parser, matcher, generator, docs_count = load_system(version_tag="v1.6-pure-chinese")
+query_parser, matcher, generator, docs_count = load_system(version_tag="v1.7-friendly-persona")
 
 if docs_count:
     st.success(f"系統已準備就緒，共載入 **{docs_count}** 份理專檔案。")
