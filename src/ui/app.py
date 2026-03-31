@@ -53,11 +53,11 @@ def load_system(version_tag: str):
     
     return query_parser, matcher, generator, len(docs)
 
-st.title("🤝 RAG 理專智能媒合系統 v1.9.3")
-st.caption("更新：雙重防雷機制（結構零加分與語意金融錨定）")
+st.title("🤝 RAG 理專智能媒合系統 v1.9.4")
+st.caption("更新：LLM 意圖守門員過濾非理財問題")
 
 # We pass a version string to force-invalidate st.cache_resource if we update it
-query_parser, matcher, generator, docs_count = load_system(version_tag="v1.9.3-anchor")
+query_parser, matcher, generator, docs_count = load_system(version_tag="v1.9.4-gatekeeper")
 
 if docs_count:
     st.success(f"系統已準備就緒，共載入 **{docs_count}** 份理專檔案。")
@@ -70,6 +70,12 @@ if docs_count:
             parsed_needs = query_parser.parse_query(query)
             with st.expander("🔍 查詢解析結果"):
                 st.json(parsed_needs.model_dump())
+            
+            # 1.5 Gatekeeper Check
+            if not getattr(parsed_needs, 'is_relevant', True):
+                st.warning("⚠️ 系統偵測到無關查詢")
+                st.info(getattr(parsed_needs, 'guidance_message', "您的查詢似乎與理財顧問無關。請輸入與財務管理、投資或您理想的理專特質相關的描述。"))
+                st.stop()
                 
             # 2. Match and Score
             phase1_results, ranked_results = matcher.rank_advisors(query, parsed_needs, top_k=3)

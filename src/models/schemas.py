@@ -45,6 +45,14 @@ class ParsedUserNeeds(BaseModel):
         default=None,
         description="Preferred communication style. None if vague."
     )
+    is_relevant: bool = Field(
+        default=True,
+        description="True if the user's query is actually about finding a financial advisor/service. False if it is off-topic (e.g. asking for code, recipe, or a dating request)."
+    )
+    guidance_message: Optional[str] = Field(
+        default=None,
+        description="If is_relevant is False, generate a polite message telling the user it's off-topic and exactly how they should describe their ideal advisor."
+    )
 
 class RecommendationResult(BaseModel):
     """
