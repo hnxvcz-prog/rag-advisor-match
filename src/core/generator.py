@@ -19,18 +19,19 @@ class RationaleGenerator:
         prompt = PromptTemplate(
             template=(
                 "你是一位資深的「頂級理財管家」匹配專家。你的目標是向使用者解釋，為什麼特定的理專是最符合其個性、需求與生活型態的選擇。\n\n"
+                "請全程僅使用「繁體中文 (Traditional Chinese)」進行回答，這點非常重要。\n\n"
                 "我將提供：\n"
                 "1. 使用者的原始查詢 (RAW QUERY)\n"
                 "2. 標準化需求 (Standardized requirements)\n"
                 "3. 理專背景資料（包含結構化標籤與完整的「理專自傳」）\n\n"
                 "你的任務：\n"
                 "為每一位理專撰寫一段個人化的「推薦理由」(約 2-3 句話)。\n"
-                "超越標籤：請不要只說「他具備某某專業」，請專注於自傳中揭露的「服務理念」、「獨特個人優勢」或「個人興趣」。\n"
+                "超越標籤：不要只說「他具備某某專業」，請專注於自傳中揭露的「服務理念」、「獨特個人優勢」或「個人興趣」。\n"
                 "讓使用者感覺這位理專的性格與作風（例如：細心且穩健、具備創新精神、以信任為本）非常契合他的處境。\n\n"
-                "關鍵要求：你必須從「理專自傳」中提取 1-2 句原始引述 (citations) 來佐證這些獨特的個人特質。\n\n"
+                "關鍵要求：必須從「理專自傳」中提取 1-2 句原始引述 (citations) 來佐證這些獨特的個人特質。\n\n"
                 "輸出格式：請輸出為 JSON 列表，每個物件包含鍵：'advisor_id', 'match_reasoning', 'citations'。\n\n"
-                "使用者查詢：\n{raw_query}\n\n"
-                "標準化需求：\n{parsed_needs}\n\n"
+                "使用者查詢內容：\n{raw_query}\n\n"
+                "標準化需求總結：\n{parsed_needs}\n\n"
                 "理專背景資料：\n{contexts}\n"
             ),
             input_variables=["raw_query", "parsed_needs", "contexts"]

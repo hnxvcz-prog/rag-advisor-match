@@ -18,7 +18,7 @@ load_dotenv()
 st.set_page_config(page_title="RAG Advisor Match", layout="wide")
 
 @st.cache_resource
-def load_system():
+def load_system(version_tag: str):
     # Attempt to load processed JSONs if they exist, otherwise initialize
     processed_dir = Path("data/processed")
     docs = []
@@ -53,10 +53,11 @@ def load_system():
     
     return query_parser, matcher, generator, len(docs)
 
-st.title("🤝 RAG Advisor Matching MVP v1.3")
-st.caption("更新：全面採用繁體中文指令解析與生成 | 配比 70/30 (自傳/標籤)")
+st.title("🤝 RAG Advisor Matching MVP v1.4")
+st.caption("更新：強化繁體中文輸出指令 | 強制快取刷新機制")
 
-query_parser, matcher, generator, docs_count = load_system()
+# We pass a version string to force-invalidate st.cache_resource if we update it
+query_parser, matcher, generator, docs_count = load_system(version_tag="v1.4-chinese-fix")
 
 if docs_count:
     st.success(f"System Ready. Indexed **{docs_count}** Advisor Documents.")
