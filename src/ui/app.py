@@ -53,8 +53,8 @@ def load_system():
     
     return query_parser, matcher, generator, len(docs)
 
-st.title("🤝 RAG Advisor Matching MVP v1.2")
-st.caption("Updated Logic: 70% Semantic (Biography) / 30% Structured (Tags) | Personalized Rationale Enabled")
+st.title("🤝 RAG Advisor Matching MVP v1.3")
+st.caption("更新：全面採用繁體中文指令解析與生成 | 配比 70/30 (自傳/標籤)")
 
 query_parser, matcher, generator, docs_count = load_system()
 
