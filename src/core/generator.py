@@ -28,8 +28,9 @@ class RationaleGenerator:
                 "為每一位理專撰寫一段個人化的「推薦理由」(約 2-3 句話)。\n"
                 "超越標籤：不要只說「他具備某某專業」，請專注於自傳中揭露的「服務理念」、「獨特個人優勢」或「個人興趣」。\n"
                 "讓使用者感覺這位理專的性格與作風（例如：細心且穩健、具備創新精神、以信任為本）非常契合他的處境。\n\n"
-                "關鍵要求：必須從「理專自傳」中提取 1-2 句原始引述 (citations) 來佐證這些獨特的個人特質。\n\n"
-                "輸出格式：請輸出為 JSON 列表，每個物件包含鍵：'advisor_id', 'match_reasoning', 'citations'。\n\n"
+                "關鍵要求：必須從「完整自傳原文」中提取 1-2 句原始引述 (citations) 來佐證這些獨特的個人特質。\n\n"
+                "輸出格式：請輸出為 JSON 列表。注意！JSON 的鍵 (Keys) 需維持英文，但對應的值 (Values) 絕對必須是完美的「繁體中文」！包含：\n"
+                "'advisor_id' (理專ID), 'match_reasoning' (繁體中文撰寫的推薦理由), 'citations' (繁體中文的原文引述)。\n\n"
                 "使用者查詢內容：\n{raw_query}\n\n"
                 "標準化需求總結：\n{parsed_needs}\n\n"
                 "理專背景資料：\n{contexts}\n"
@@ -39,13 +40,12 @@ class RationaleGenerator:
         
         chain = prompt | self.llm | self.parser
         
-        # Prepare context payload
         contexts_str = ""
         for doc, score in ranked_docs:
-            contexts_str += f"=== ADVISOR ID: {doc.profile.advisor_id} (Score: {score:.2f}) ===\n"
-            contexts_str += f"NAME: {doc.profile.name}\n"
-            contexts_str += f"STRUCTURED: Exp: {doc.profile.expertise}, Clients: {doc.profile.target_clients}, Comm: {doc.profile.communication_style}\n"
-            contexts_str += f"RAW TEXT: {doc.full_text[:1000]}... [TRUNCATED]\n\n"
+            contexts_str += f"=== 理專檔案 ID: {doc.profile.advisor_id} (配對分數: {score:.2f}) ===\n"
+            contexts_str += f"姓名: {doc.profile.name}\n"
+            contexts_str += f"結構化特徵: 專長={doc.profile.expertise}, 目標客群={doc.profile.target_clients}, 溝通風格={doc.profile.communication_style}\n"
+            contexts_str += f"完整自傳原文: {doc.full_text[:1000]}... [以下省略]\n\n"
             
         try:
             llm_results = chain.invoke({

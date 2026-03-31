@@ -53,11 +53,11 @@ def load_system(version_tag: str):
     
     return query_parser, matcher, generator, len(docs)
 
-st.title("🤝 RAG Advisor Matching MVP v1.4")
-st.caption("更新：強化繁體中文輸出指令 | 強制快取刷新機制")
+st.title("🤝 RAG Advisor Matching MVP v1.5")
+st.caption("更新：強化防護！徹底根除中英夾雜問題。")
 
 # We pass a version string to force-invalidate st.cache_resource if we update it
-query_parser, matcher, generator, docs_count = load_system(version_tag="v1.4-chinese-fix")
+query_parser, matcher, generator, docs_count = load_system(version_tag="v1.5-full-chinese")
 
 if docs_count:
     st.success(f"System Ready. Indexed **{docs_count}** Advisor Documents.")
