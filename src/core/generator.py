@@ -27,22 +27,22 @@ class RationaleGenerator:
         
         prompt = PromptTemplate(
             template=(
-                "你現在是使用者的「熟識好友」。你的任務是向使用者熱情地推薦一位你認識的理專朋友，解釋為什麼這位理專超適合他。\n\n"
+                "你現在是使用者的「熟識好友」。你的任務是向使用者熱情地分別推薦【這幾位】你認識的理專朋友，解釋為什麼他們各自都很適合使用者。\n\n"
                 "【語氣要求】\n"
                 "極度自然、日常口語化、充滿人情味（像是在跟好朋友喝咖啡時的聊天口吻），要帶入情感，稱呼理專時就像在熱心介紹自己的好夥伴或好朋友。千萬不要像死板的客服人員或高高在上的管家。\n\n"
                 "請全程僅使用「繁體中文」進行回答，這點非常重要。\n\n"
                 "我將提供：\n"
                 "1. 使用者的原始查詢 (RAW QUERY)\n"
                 "2. 標準化需求 (Standardized requirements)\n"
-                "3. 理專背景資料（包含結構化標籤與完整的「理專自傳」）\n\n"
+                "3. 幾位理專背景資料（包含結構化標籤與完整的「理專自傳」）\n\n"
                 "你的任務：\n"
-                "為每一位理專撰寫一段個人化的「推薦對話」(約 3-4 句話)。\n"
+                "為【名單上的每一位】理專分別撰寫一段個人化的「推薦對話」(約 3-4 句話)。\n"
                 "超越標籤：不要冷冰冰地列點說「他具備某某專業」，請專注於自傳中揭露的「服務理念」、「獨特個人優勢」或「個人興趣」。\n"
-                "讓使用者感覺你真的很懂這位理專的性格與作風（例如：細心且穩健、具備創新精神、以信任為本），並且告訴使用者這點有多契合他的處境。\n\n"
+                "讓使用者感覺你真的很懂這幾位理專的性格與作風（例如：細心且穩健、具備創新精神、以信任為本），並且告訴使用者他們為何契合目前的處境。\n\n"
                 "關鍵要求：必須從「完整自傳原文」中提取 1-2 句原始引述 (citations) 來佐證這些獨特的個人特質。\n\n"
                 "【重要輸出格式】\n"
                 "{format_instructions}\n"
-                "請嚴格遵守這個 JSON 結構，並且保證所有的 values (推薦對話與引述) 都必須是「繁體中文」。\n\n"
+                "請嚴格遵守這個 JSON 結構，你必須返回【所有】提供給你的理專的推薦結果，並且保證所有的 values (推薦對話與引述) 都必須是「繁體中文」。\n\n"
                 "使用者查詢內容：\n{raw_query}\n\n"
                 "標準化需求總結：\n{parsed_needs}\n\n"
                 "理專背景資料：\n{contexts}\n"
@@ -71,8 +71,14 @@ class RationaleGenerator:
             final_results = []
             for doc, score in ranked_docs:
                 advisor_id = doc.profile.advisor_id
-                # Find corresponding generated rationale
-                gen_data = next((x for x in llm_results.results if x.advisor_id == advisor_id), None)
+                # Find corresponding generated rationale robustly (fallback to name match)
+                gen_data = next((
+                    x for x in llm_results.results 
+                    if x.advisor_id == advisor_id 
+                    or x.advisor_id in advisor_id 
+                    or doc.profile.name in x.advisor_id
+                    or x.advisor_id == doc.profile.name
+                ), None)
                 
                 if gen_data:
                     res = RecommendationResult(

@@ -53,11 +53,11 @@ def load_system(version_tag: str):
     
     return query_parser, matcher, generator, len(docs)
 
-st.title("🤝 RAG 理專智能媒合系統 v1.9.1")
-st.caption("更新：生成器解析模型 Hotfix")
+st.title("🤝 RAG 理專智能媒合系統 v1.9.2")
+st.caption("更新：修復生成器過濾推薦人數的問題")
 
 # We pass a version string to force-invalidate st.cache_resource if we update it
-query_parser, matcher, generator, docs_count = load_system(version_tag="v1.9.1-hotfix")
+query_parser, matcher, generator, docs_count = load_system(version_tag="v1.9.2-hotfix")
 
 if docs_count:
     st.success(f"系統已準備就緒，共載入 **{docs_count}** 份理專檔案。")
