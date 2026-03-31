@@ -4,9 +4,9 @@ from ..models.schemas import AdvisorDocument, ParsedUserNeeds, RecommendationRes
 class Matcher:
     def __init__(self, indexer):
         self.indexer = indexer
-        # Weights
-        self.SEMANTIC_WEIGHT = 0.7
-        self.STRUCTURED_WEIGHT = 0.3
+        # Weights (Base: Semantic 90%, Bonus: Structured 10%)
+        self.SEMANTIC_WEIGHT = 0.9
+        self.STRUCTURED_WEIGHT = 0.1
         
     def _calculate_structured_score(self, profile, requirements: ParsedUserNeeds) -> float:
         """Calculates logic exact match bonus based on overlaps. Max score 1.0."""
@@ -33,8 +33,8 @@ class Matcher:
             
         return matched / total_conditions
 
-    def rank_advisors(self, raw_query: str, parsed_needs: ParsedUserNeeds, top_k: int = 3) -> List[Tuple[AdvisorDocument, float]]:
-        # Phase 1: Semantic Search
+    def rank_advisors(self, raw_query: str, parsed_needs: ParsedUserNeeds, top_k: int = 3) -> Tuple[List[Tuple[AdvisorDocument, float]], List[Tuple[AdvisorDocument, float]]]:
+        # Phase 1: Semantic Search (Retrieve exact 10 candidates based on biography)
         semantic_results = self.indexer.semantic_search(raw_query, top_k=10)
         
         ranked_docs = []
@@ -49,4 +49,4 @@ class Matcher:
             
         # Sort descending by final score
         ranked_docs.sort(key=lambda x: x[1], reverse=True)
-        return ranked_docs[:top_k]
+        return semantic_results, ranked_docs[:top_k]

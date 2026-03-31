@@ -53,11 +53,11 @@ def load_system(version_tag: str):
     
     return query_parser, matcher, generator, len(docs)
 
-st.title("🤝 RAG 理專智能媒合系統 v1.7")
-st.caption("更新：好友推薦模式！口語化與感性解說。")
+st.title("🤝 RAG 理專智能媒合系統 v1.8")
+st.caption("更新：透明化兩階段 RAG 篩選 (純自傳初選 Top 10 -> 自傳(0.9)標籤(0.1)決選 Top 3)")
 
 # We pass a version string to force-invalidate st.cache_resource if we update it
-query_parser, matcher, generator, docs_count = load_system(version_tag="v1.7-friendly-persona")
+query_parser, matcher, generator, docs_count = load_system(version_tag="v1.8-two-stage-rag")
 
 if docs_count:
     st.success(f"系統已準備就緒，共載入 **{docs_count}** 份理專檔案。")
@@ -72,8 +72,13 @@ if docs_count:
                 st.json(parsed_needs.model_dump())
                 
             # 2. Match and Score
-            ranked_results = matcher.rank_advisors(query, parsed_needs, top_k=3)
+            phase1_results, ranked_results = matcher.rank_advisors(query, parsed_needs, top_k=3)
             
+            with st.expander("📊 第一階段：語意檢索初選名單 (Top 10)"):
+                st.markdown("僅依賴「自傳全文」的語意相似度撈出 10 人候選名單：")
+                for doc, sem_score in phase1_results:
+                    st.write(f"- **{doc.profile.name}** (純語意關聯度分數: {sem_score:.4f})")
+                    
             # 3. Generate Rationales
             final_recommendations = generator.generate_recommendation_reasoning(query, parsed_needs, ranked_results)
             
