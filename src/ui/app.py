@@ -53,22 +53,22 @@ def load_system(version_tag: str):
     
     return query_parser, matcher, generator, len(docs)
 
-st.title("🤝 RAG Advisor Matching MVP v1.5")
-st.caption("更新：強化防護！徹底根除中英夾雜問題。")
+st.title("🤝 RAG 理專智能媒合系統 v1.6")
+st.caption("更新：全系統純中文環境設定、介面與防呆機制")
 
 # We pass a version string to force-invalidate st.cache_resource if we update it
-query_parser, matcher, generator, docs_count = load_system(version_tag="v1.5-full-chinese")
+query_parser, matcher, generator, docs_count = load_system(version_tag="v1.6-pure-chinese")
 
 if docs_count:
-    st.success(f"System Ready. Indexed **{docs_count}** Advisor Documents.")
+    st.success(f"系統已準備就緒，共載入 **{docs_count}** 份理專檔案。")
     
-    query = st.text_input("描述您的理財需求 (Describe your financial needs):", placeholder="範例：我在尋找一位能為高資產客群進行退休規劃，且溝通風格溫和的理專")
+    query = st.text_input("請描述您的理財需求：", placeholder="範例：我在尋找一位能為高資產客群進行退休規劃，且溝通風格溫和的理專")
     
-    if st.button("搜尋 (Search)") and query:
-        with st.spinner("Analyzing query and matching advisors..."):
+    if st.button("開始搜尋") and query:
+        with st.spinner("正在分析您的需求並配對合適的理財顧問..."):
             # 1. Parse Query
             parsed_needs = query_parser.parse_query(query)
-            with st.expander("🔍 查詢解析結果 (Parsed Criteria)"):
+            with st.expander("🔍 查詢解析結果"):
                 st.json(parsed_needs.model_dump())
                 
             # 2. Match and Score
@@ -77,23 +77,23 @@ if docs_count:
             # 3. Generate Rationales
             final_recommendations = generator.generate_recommendation_reasoning(query, parsed_needs, ranked_results)
             
-            st.subheader("🏆 推薦名單 (Top Recommendations)")
+            st.subheader("🏆 最佳推薦名單")
             for i, rec in enumerate(final_recommendations):
                 st.markdown("---")
                 cols = st.columns([1, 2])
                 
                 with cols[0]:
-                    st.metric(label=f"#{i+1} 綜合配對分數 (Match Score)", value=f"{rec.match_score:.2f}")
+                    st.metric(label=f"#{i+1} 綜合配對分數", value=f"{rec.match_score:.2f}")
                     st.markdown(f"**姓名**: {rec.advisor.name}")
-                    st.markdown(f"**專長 (Expertise)**: {', '.join(rec.advisor.expertise)}")
-                    st.markdown(f"**客群 (Clients)**: {', '.join(rec.advisor.target_clients)}")
-                    st.markdown(f"**風格 (Style)**: {rec.advisor.communication_style}")
+                    st.markdown(f"**專長**: {', '.join(rec.advisor.expertise)}")
+                    st.markdown(f"**熟悉客群**: {', '.join(rec.advisor.target_clients)}")
+                    st.markdown(f"**溝通風格**: {rec.advisor.communication_style}")
                     
                 with cols[1]:
-                    st.markdown("**🧠 推薦理由 (Rationale):**")
+                    st.markdown("**🧠 推薦理由:**")
                     st.write(rec.rationale)
                     
                     if rec.citations:
-                        st.markdown("**📝 文本依據 (Citations from Source):**")
+                        st.markdown("**📝 原文依據:**")
                         for cit in rec.citations:
                             st.info(f'"{cit}"')

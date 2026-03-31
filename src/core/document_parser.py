@@ -53,9 +53,9 @@ class DocumentParser:
             return AdvisorProfile(
                 advisor_id=filename,
                 name=filename.replace(".docx", ""),
-                expertise=["Not Provided"],
-                target_clients=["Not Provided"],
-                communication_style="Not Provided"
+                expertise=["未提供"],
+                target_clients=["未提供"],
+                communication_style="未提供"
             )
 
     def process_all(self) -> List[AdvisorDocument]:

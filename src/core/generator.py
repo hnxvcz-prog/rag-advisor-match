@@ -19,7 +19,7 @@ class RationaleGenerator:
         prompt = PromptTemplate(
             template=(
                 "你是一位資深的「頂級理財管家」匹配專家。你的目標是向使用者解釋，為什麼特定的理專是最符合其個性、需求與生活型態的選擇。\n\n"
-                "請全程僅使用「繁體中文 (Traditional Chinese)」進行回答，這點非常重要。\n\n"
+                "請全程僅使用「繁體中文」進行回答，這點非常重要。\n\n"
                 "我將提供：\n"
                 "1. 使用者的原始查詢 (RAW QUERY)\n"
                 "2. 標準化需求 (Standardized requirements)\n"
@@ -29,7 +29,7 @@ class RationaleGenerator:
                 "超越標籤：不要只說「他具備某某專業」，請專注於自傳中揭露的「服務理念」、「獨特個人優勢」或「個人興趣」。\n"
                 "讓使用者感覺這位理專的性格與作風（例如：細心且穩健、具備創新精神、以信任為本）非常契合他的處境。\n\n"
                 "關鍵要求：必須從「完整自傳原文」中提取 1-2 句原始引述 (citations) 來佐證這些獨特的個人特質。\n\n"
-                "輸出格式：請輸出為 JSON 列表。注意！JSON 的鍵 (Keys) 需維持英文，但對應的值 (Values) 絕對必須是完美的「繁體中文」！包含：\n"
+                "輸出格式：請輸出為 JSON 列表。注意！JSON 的鍵 (Keys) 需維持英文，但對應的值 (Values) 絕對必須是「繁體中文」包含：\n"
                 "'advisor_id' (理專ID), 'match_reasoning' (繁體中文撰寫的推薦理由), 'citations' (繁體中文的原文引述)。\n\n"
                 "使用者查詢內容：\n{raw_query}\n\n"
                 "標準化需求總結：\n{parsed_needs}\n\n"
@@ -65,7 +65,7 @@ class RationaleGenerator:
                     res = RecommendationResult(
                         advisor=doc.profile,
                         match_score=score,
-                        rationale=gen_data.get("match_reasoning", "Recommended by semantic matching."),
+                        rationale=gen_data.get("match_reasoning", "系統已透過語意搜尋成功找到此理專，但未能順利生成推薦摘要。"),
                         citations=gen_data.get("citations", [])
                     )
                     final_results.append(res)
@@ -76,5 +76,5 @@ class RationaleGenerator:
             return [RecommendationResult(
                 advisor=d.profile, 
                 match_score=s, 
-                rationale="Successfully matched by retrieval system, explanation generation failed.", 
+                rationale="系統已成功檢索到高分的理專檔案，但向語言模型請求推薦理由時發生錯誤或逾時。", 
                 citations=[]) for d, s in ranked_docs]
