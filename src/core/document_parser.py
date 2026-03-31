@@ -31,12 +31,12 @@ class DocumentParser:
         """Uses LLM to extract structured metadata (expertise, clients, communication)."""
         prompt = PromptTemplate(
             template=(
-                "You are an expert financial consultant profiler.\n"
-                "Extract the advisor's profile from the following text based on the required schema.\n"
-                "If a field is not explicitly mentioned or clearly implied, use 'Not Provided'.\n"
-                "The unique ID must be the filename provided below: {filename}\n\n"
+                "你是一位專業的理財顧問剖析專家。\n"
+                "請根據以下文本內容，提取理專的個人背景資料並符合要求的 JSON 格式。\n"
+                "如果某個欄位在文本中未提及或無法推論，請填寫「未提供」。\n"
+                "唯一識別碼 (advisor_id) 必須使用以下提供之檔名：{filename}\n\n"
                 "{format_instructions}\n\n"
-                "TEXT:\n{text}\n"
+                "文本內容：\n{text}\n"
             ),
             input_variables=["text", "filename"],
             partial_variables={"format_instructions": self.parser.get_format_instructions()}
