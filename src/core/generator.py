@@ -2,7 +2,7 @@ from typing import List
 from copy import deepcopy
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import PromptTemplate
-from langchain_core.output_parsers import JsonOutputParser
+from langchain_core.output_parsers import JsonOutputParser, PydanticOutputParser
 
 from pydantic import BaseModel, Field
 from ..models.schemas import AdvisorDocument, ParsedUserNeeds, RecommendationResult
