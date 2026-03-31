@@ -53,13 +53,13 @@ def load_system():
     
     return query_parser, matcher, generator, len(docs)
 
-st.title("🤝 RAG Advisor Matching MVP v1.1")
-st.caption("Last Updated: 2026-03-30")
+st.title("🤝 RAG Advisor Matching MVP v1.2")
+st.caption("Updated Logic: 70% Semantic (Biography) / 30% Structured (Tags) | Personalized Rationale Enabled")
 
 query_parser, matcher, generator, docs_count = load_system()
 
 if docs_count:
-    st.success(f"System Ready. Indexed **{docs_count}** Advisor Documents from `data/processed/`.")
+    st.success(f"System Ready. Indexed **{docs_count}** Advisor Documents.")
     
     query = st.text_input("描述您的理財需求 (Describe your financial needs):", placeholder="範例：我在尋找一位能為高資產客群進行退休規劃，且溝通風格溫和的理專")
     

@@ -5,8 +5,8 @@ class Matcher:
     def __init__(self, indexer):
         self.indexer = indexer
         # Weights
-        self.SEMANTIC_WEIGHT = 0.6
-        self.STRUCTURED_WEIGHT = 0.4
+        self.SEMANTIC_WEIGHT = 0.7
+        self.STRUCTURED_WEIGHT = 0.3
         
     def _calculate_structured_score(self, profile, requirements: ParsedUserNeeds) -> float:
         """Calculates logic exact match bonus based on overlaps. Max score 1.0."""
