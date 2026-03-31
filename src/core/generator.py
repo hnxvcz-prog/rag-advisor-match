@@ -4,12 +4,21 @@ from langchain_openai import ChatOpenAI
 from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
 
+from pydantic import BaseModel, Field
 from ..models.schemas import AdvisorDocument, ParsedUserNeeds, RecommendationResult
+
+class GenResult(BaseModel):
+    advisor_id: str = Field(description="The exact ID of the advisor")
+    match_reasoning: str = Field(description="Personalized rationale in Traditional Chinese")
+    citations: List[str] = Field(description="List of verbatim quotes in Traditional Chinese")
+
+class GenResponse(BaseModel):
+    results: List[GenResult]
 
 class RationaleGenerator:
     def __init__(self):
         self.llm = ChatOpenAI(model="gpt-4o", temperature=0.3)
-        self.parser = JsonOutputParser()
+        self.parser = PydanticOutputParser(pydantic_object=GenResponse)
         
     def generate_recommendation_reasoning(self, 
                                         raw_query: str, 
@@ -31,13 +40,15 @@ class RationaleGenerator:
                 "超越標籤：不要冷冰冰地列點說「他具備某某專業」，請專注於自傳中揭露的「服務理念」、「獨特個人優勢」或「個人興趣」。\n"
                 "讓使用者感覺你真的很懂這位理專的性格與作風（例如：細心且穩健、具備創新精神、以信任為本），並且告訴使用者這點有多契合他的處境。\n\n"
                 "關鍵要求：必須從「完整自傳原文」中提取 1-2 句原始引述 (citations) 來佐證這些獨特的個人特質。\n\n"
-                "輸出格式：請輸出為 JSON 列表。注意！JSON 的鍵 (Keys) 需維持英文，但對應的值 (Values) 絕對必須是「繁體中文」包含：\n"
-                "'advisor_id' (理專ID), 'match_reasoning' (繁體中文撰寫的推薦理由), 'citations' (繁體中文的原文引述)。\n\n"
+                "【重要輸出格式】\n"
+                "{format_instructions}\n"
+                "請嚴格遵守這個 JSON 結構，並且保證所有的 values (推薦對話與引述) 都必須是「繁體中文」。\n\n"
                 "使用者查詢內容：\n{raw_query}\n\n"
                 "標準化需求總結：\n{parsed_needs}\n\n"
                 "理專背景資料：\n{contexts}\n"
             ),
-            input_variables=["raw_query", "parsed_needs", "contexts"]
+            input_variables=["raw_query", "parsed_needs", "contexts"],
+            partial_variables={"format_instructions": self.parser.get_format_instructions()}
         )
         
         chain = prompt | self.llm | self.parser
@@ -56,19 +67,19 @@ class RationaleGenerator:
                 "contexts": contexts_str
             })
             
-            # Reconstruct RecommendationResults mapping LLM JSON to original objects
+            # Reconstruct RecommendationResults mapping LLM Pydantic objects to original objects
             final_results = []
             for doc, score in ranked_docs:
                 advisor_id = doc.profile.advisor_id
                 # Find corresponding generated rationale
-                gen_data = next((x for x in llm_results if x.get("advisor_id") == advisor_id), None)
+                gen_data = next((x for x in llm_results.results if x.advisor_id == advisor_id), None)
                 
                 if gen_data:
                     res = RecommendationResult(
                         advisor=doc.profile,
                         match_score=score,
-                        rationale=gen_data.get("match_reasoning", "系統已透過語意搜尋成功找到此理專，但未能順利生成推薦摘要。"),
-                        citations=gen_data.get("citations", [])
+                        rationale=gen_data.match_reasoning or "系統已透過語意搜尋成功找到此理專，但未能順利生成推薦摘要。",
+                        citations=gen_data.citations or []
                     )
                     final_results.append(res)
             return final_results

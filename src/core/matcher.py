@@ -43,8 +43,9 @@ class Matcher:
             struct_score = self._calculate_structured_score(doc.profile, parsed_needs)
             
             # Phase 3: Blended Score
-            # sem_score is cosine similarity roughly [0, 1]
-            final_score = (sem_score * self.SEMANTIC_WEIGHT) + (struct_score * self.STRUCTURED_WEIGHT)
+            # sem_score is cosine similarity. We treat it as the base.
+            # structured score (max 1.0) is multiplied by 0.1 as an additive bonus.
+            final_score = sem_score + (struct_score * self.STRUCTURED_WEIGHT)
             ranked_docs.append((doc, final_score))
             
         # Sort descending by final score

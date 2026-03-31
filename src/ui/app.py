@@ -53,11 +53,11 @@ def load_system(version_tag: str):
     
     return query_parser, matcher, generator, len(docs)
 
-st.title("🤝 RAG 理專智能媒合系統 v1.8")
-st.caption("更新：透明化兩階段 RAG 篩選 (純自傳初選 Top 10 -> 自傳(0.9)標籤(0.1)決選 Top 3)")
+st.title("🤝 RAG 理專智能媒合系統 v1.9")
+st.caption("更新：純加分機制與更穩定的生成器解析模型")
 
 # We pass a version string to force-invalidate st.cache_resource if we update it
-query_parser, matcher, generator, docs_count = load_system(version_tag="v1.8-two-stage-rag")
+query_parser, matcher, generator, docs_count = load_system(version_tag="v1.9-stable")
 
 if docs_count:
     st.success(f"系統已準備就緒，共載入 **{docs_count}** 份理專檔案。")
