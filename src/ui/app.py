@@ -77,7 +77,7 @@ selected_style = st.sidebar.selectbox("💬 溝通風格", ["不限"] + all_styl
 if docs:
     st.success(f"系統已準備就緒，共載入 **{len(docs)}** 份理專檔案。")
     
-    query = st.text_input("請描述您的理財需求：", placeholder="範例：我在尋找一位能為高資產客群進行退休規劃，且溝通風格溫和的理專")
+    query = st.text_input("描述您滿意或不滿意的服務經歷：", placeholder="範例：我在尋找一位能為高資產客群進行退休規劃，且溝通風格溫和的理專")
     
     if st.button("開始搜尋") and (query or selected_expertise or selected_clients or selected_branch != "所有分行"):
         # Handle empty query gracefully if tags are selected
