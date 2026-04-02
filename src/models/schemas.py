@@ -17,8 +17,12 @@ class AdvisorProfile(BaseModel):
         description="Target demographics (e.g., High Net Worth, Small Business)"
     )
     communication_style: str = Field(
-        default="Not Provided",
+        default="未提供",
         description="Communication style descriptor (e.g., Gentle, Direct, Academic)"
+    )
+    branch: str = Field(
+        default="未提供",
+        description="The branch or location the advisor manages (e.g., 新北, 台北)"
     )
 
 class AdvisorDocument(BaseModel):
@@ -44,6 +48,10 @@ class ParsedUserNeeds(BaseModel):
     communication_preference: Optional[str] = Field(
         default=None,
         description="Preferred communication style. None if vague."
+    )
+    branch_needed: Optional[str] = Field(
+        default=None,
+        description="Preferred branch or location. None if vague."
     )
     is_relevant: bool = Field(
         default=True,

@@ -34,8 +34,27 @@ class Matcher:
         return matched / total_conditions
 
     def rank_advisors(self, raw_query: str, parsed_needs: ParsedUserNeeds, top_k: int = 3) -> Tuple[List[Tuple[AdvisorDocument, float]], List[Tuple[AdvisorDocument, float]]]:
-        # Phase 1: Semantic Search (Retrieve exact 10 candidates based on biography)
-        semantic_results = self.indexer.semantic_search(raw_query, top_k=10)
+        # Phase 0: Hard Filter (Branch)
+        all_docs = self.indexer.documents
+        filtered_docs = all_docs
+        if parsed_needs.branch_needed and parsed_needs.branch_needed != "未提供":
+            filtered_docs = [doc for doc in all_docs if doc.profile.branch == parsed_needs.branch_needed]
+            
+        # If no one matches the branch, we might return empty or continue with all to be safe? 
+        # Requirement said "Hard Filter", so we should strictly respect it.
+        if not filtered_docs:
+            return [], []
+
+        # Phase 1: Semantic Search (Retrieve candidates among filtered pool)
+        # Note: Indexer currently searches globally. We need to filter the results.
+        semantic_results = self.indexer.semantic_search(raw_query, top_k=20) # Get more to allow filtering
+        
+        # Filter semantic results by branch
+        if parsed_needs.branch_needed and parsed_needs.branch_needed != "未提供":
+            semantic_results = [(doc, score) for doc, score in semantic_results if doc.profile.branch == parsed_needs.branch_needed]
+        
+        # Take Top 10 from filtered semantic results
+        semantic_results = semantic_results[:10]
         
         ranked_docs = []
         for doc, sem_score in semantic_results:
