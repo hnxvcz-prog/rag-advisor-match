@@ -20,7 +20,7 @@ st.set_page_config(page_title="RAG Advisor Match", layout="wide")
 @st.cache_resource
 def load_system(version_tag: str):
     # Attempt to load processed JSONs if they exist, otherwise initialize
-    processed_dir = Path("data/processed")
+    processed_dir = Path("rag_agent/data/processed")
     docs = []
     
     # We add a print statement to see what's happening in logs
@@ -38,11 +38,11 @@ def load_system(version_tag: str):
     # If no processed data or we want to force re-parse
     if not docs:
         st.info("Parsing raw Word files...")
-        parser = DocumentParser()
+        parser = DocumentParser(raw_dir="rag_agent/data/raw", processed_dir="rag_agent/data/processed")
         docs = parser.process_all()
         if not docs:
             st.error("No documents found.")
-            return None, None, None, 0
+            return None, None, None, [], [], [], [], []
             
     indexer = Indexer()
     indexer.add_documents(docs)
@@ -59,11 +59,11 @@ def load_system(version_tag: str):
     
     return query_parser, matcher, generator, docs, all_expertise, all_clients, all_styles, all_branches
 
-st.title("🤝 RAG 理專智能媒合系統 v2.0")
-st.caption("更新：動態標籤篩選、分行硬過濾與語意混合檢索架構")
+st.title("🤝 RAG 理專智能媒合系統 v2.6")
+st.caption("核心更新：雙階段 RAG (自傳+標籤) 50/50 權重融合、客戶特徵多維度匹配")
 
 # We pass a version string to force-invalidate st.cache_resource if we update it
-query_parser, matcher, generator, docs, all_expertise, all_clients, all_styles, all_branches = load_system(version_tag="v2.0-ui-tags")
+query_parser, matcher, generator, docs, all_expertise, all_clients, all_styles, all_branches = load_system(version_tag="v2.6.5-dual-score-fix")
 
 # --- UI Sidebar for Tag Selection ---
 st.sidebar.header("🔍 精確條件篩選")
@@ -73,6 +73,13 @@ selected_branch = st.sidebar.selectbox("🏠 經管分行 (硬過濾)", ["所有
 selected_expertise = st.sidebar.multiselect("💡 專業領域", all_expertise)
 selected_clients = st.sidebar.multiselect("👥 熟悉客群", all_clients)
 selected_style = st.sidebar.selectbox("💬 溝通風格", ["不限"] + all_styles)
+
+st.sidebar.markdown("---")
+st.sidebar.subheader("👤 客戶投資背景 (選填)")
+selected_exp = st.sidebar.selectbox("⏳ 投資經驗", ["不限", "1年以下", "1~3年", "3~5年", "5年以上"])
+selected_products = st.sidebar.multiselect("📦 曾接觸商品", ["定存", "外匯", "基金", "ETF", "股票", "債券", "結構型商品", "保險"])
+selected_alloc = st.sidebar.multiselect("📊 目前資產配置 (最重兩項)", ["現金/存款", "基金/ETF", "股票", "債券/固定收益商品", "結構型商品", "保險", "尚未明確配置"], max_selections=2)
+selected_scale = st.sidebar.selectbox("💰 預計管理資產規模", ["不限", "300~1000萬", "1000~3000萬", "3000萬以上"])
 
 if docs:
     st.success(f"系統已準備就緒，共載入 **{len(docs)}** 份理專檔案。")
@@ -101,23 +108,46 @@ if docs:
                 
             if selected_style != "不限":
                 parsed_needs.communication_preference = selected_style
+                
+            if selected_exp != "不限":
+                parsed_needs.investment_experience = selected_exp
+                
+            if selected_products:
+                parsed_needs.products_touched = list(set(parsed_needs.products_touched + selected_products))
+                
+            if selected_alloc:
+                parsed_needs.asset_allocation = list(set(parsed_needs.asset_allocation + selected_alloc))
+                
+            if selected_scale != "不限":
+                parsed_needs.asset_scale = selected_scale
 
             with st.expander("🔍 綜合需求解析結果"):
                 st.json(parsed_needs.model_dump())
             
             # 1.5 Gatekeeper Check (Only if query was non-empty)
-            if query and not getattr(parsed_needs, 'is_relevant', True):
+            is_relevant = getattr(parsed_needs, 'is_relevant', True)
+            if query and not is_relevant:
                 st.warning("⚠️ 系統偵測到無關查詢")
-                st.info(getattr(parsed_needs, 'guidance_message', "您的查詢似乎與理財顧問無關。請輸入與財務管理、投資或您理想的理專特質相關的描述。"))
+                msg = getattr(parsed_needs, 'guidance_message', None)
+                if not msg or len(msg.strip()) < 5:
+                    msg = "您的查詢似乎與理財顧問或投資規劃無關。請試著描述您理想的理專特質（例如：溝通親切、專業穩健）或目前的財務需求（例如：退休規劃、資產傳承）。"
+                st.info(f"💡 友善提醒：{msg}")
                 st.stop()
                 
             # 2. Match and Score
-            phase1_results, ranked_results = matcher.rank_advisors(effective_query, parsed_needs, top_k=3)
+            bio_raw, tags_raw, ranked_results = matcher.rank_advisors(effective_query, parsed_needs, top_k=3)
             
-            with st.expander("📊 第一階段：語意檢索初選名單 (Top 10)"):
-                st.markdown("僅依賴「自傳全文」的語意相似度撈出 10 人候選名單：")
-                for doc, sem_score in phase1_results:
-                    st.write(f"- **{doc.profile.name}** (純語意關聯度分數: {sem_score:.4f})")
+            with st.expander("📊 第一階段：雙路徑語意檢索初步得分 (自傳 vs 標籤)"):
+                st.markdown("系統同步檢索兩個向量空間，最終得分為兩者平均值（各佔 50%）：")
+                c1, c2 = st.columns(2)
+                with c1:
+                    st.markdown("**📄 自傳檢索路徑 (Bio)**")
+                    for doc, sem_score in bio_raw:
+                        st.write(f"- **{doc.profile.name}** ({sem_score:.4f})")
+                with c2:
+                    st.markdown("**🏷️ 標籤檢索路徑 (Tags)**")
+                    for doc, sem_score in tags_raw:
+                        st.write(f"- **{doc.profile.name}** ({sem_score:.4f})")
                     
             # 3. Generate Rationales
             final_recommendations = generator.generate_recommendation_reasoning(query, parsed_needs, ranked_results)
@@ -128,7 +158,7 @@ if docs:
                 cols = st.columns([1, 2])
                 
                 with cols[0]:
-                    st.metric(label=f"#{i+1} 綜合配對分數", value=f"{rec.match_score:.2f}")
+                    st.metric(label=f"#{i+1} 綜合配對得分 (0-100)", value=f"{rec.match_score:.1f}")
                     st.markdown(f"**姓名**: {rec.advisor.name}")
                     st.markdown(f"**專長**: {', '.join(rec.advisor.expertise)}")
                     st.markdown(f"**熟悉客群**: {', '.join(rec.advisor.target_clients)}")
@@ -139,6 +169,6 @@ if docs:
                     st.write(rec.rationale)
                     
                     if rec.citations:
-                        st.markdown("**📝 原文依據:**")
+                        st.markdown("**📝 關鍵引用 (來自自傳):**")
                         for cit in rec.citations:
                             st.info(f'"{cit}"')

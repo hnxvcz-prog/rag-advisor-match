@@ -4,69 +4,66 @@ from ..models.schemas import AdvisorDocument, ParsedUserNeeds, RecommendationRes
 class Matcher:
     def __init__(self, indexer):
         self.indexer = indexer
-        # Weights (Base: Semantic 90%, Bonus: Structured 10%)
-        self.SEMANTIC_WEIGHT = 0.9
-        self.STRUCTURED_WEIGHT = 0.1
+        # Weights (50/50 split as requested)
+        self.BIO_WEIGHT = 0.5
+        self.TAGS_WEIGHT = 0.5
         
-    def _calculate_structured_score(self, profile, requirements: ParsedUserNeeds) -> float:
-        """Calculates logic exact match bonus based on overlaps. Max score 1.0."""
-        matched = 0
-        total_conditions = 0
-        
-        if requirements.expertise_needed:
-            total_conditions += 1
-            if any(req.lower() in [e.lower() for e in profile.expertise] for req in requirements.expertise_needed):
-                matched += 1
-                
-        if requirements.target_clients_needed:
-            total_conditions += 1
-            if any(req.lower() in [c.lower() for c in profile.target_clients] for req in requirements.target_clients_needed):
-                matched += 1
-                
-        if requirements.communication_preference:
-            total_conditions += 1
-            if requirements.communication_preference.lower() in profile.communication_style.lower():
-                matched += 1
-                
-        if total_conditions == 0:
-            return 0.0 # If user asks nothing structured, don't award any bonus
-            
-        return matched / total_conditions
 
-    def rank_advisors(self, raw_query: str, parsed_needs: ParsedUserNeeds, top_k: int = 3) -> Tuple[List[Tuple[AdvisorDocument, float]], List[Tuple[AdvisorDocument, float]]]:
-        # Phase 0: Hard Filter (Branch)
-        all_docs = self.indexer.documents
-        filtered_docs = all_docs
-        if parsed_needs.branch_needed and parsed_needs.branch_needed != "未提供":
-            filtered_docs = [doc for doc in all_docs if doc.profile.branch == parsed_needs.branch_needed]
+    def rank_advisors(self, raw_query: str, parsed_needs: ParsedUserNeeds, top_k: int = 3) -> Tuple[List[Tuple[AdvisorDocument, float]], List[Tuple[AdvisorDocument, float]], List[Tuple[AdvisorDocument, float]]]:
+        # Phase 0: Retrieval from both indices
+        # Build a descriptive query for the tags index to leverage client profile matching
+        tags_query_parts = [raw_query]
+        if parsed_needs.investment_experience:
+            tags_query_parts.append(f"投資經驗:{parsed_needs.investment_experience}")
+        if parsed_needs.asset_scale:
+            tags_query_parts.append(f"資產規模:{parsed_needs.asset_scale}")
+        if parsed_needs.products_touched:
+            tags_query_parts.append(f"曾接觸商品:{', '.join(parsed_needs.products_touched)}")
+        if parsed_needs.asset_allocation:
+            tags_query_parts.append(f"目前的資產配置:{', '.join(parsed_needs.asset_allocation)}")
             
-        # If no one matches the branch, we might return empty or continue with all to be safe? 
-        # Requirement said "Hard Filter", so we should strictly respect it.
-        if not filtered_docs:
+        tags_query = ", ".join(tags_query_parts)
+
+        # We fetch a larger pool to ensure we can merge them and apply filters
+        bio_results = self.indexer.semantic_search(raw_query, index_type="bio", top_k=50)
+        tags_results = self.indexer.semantic_search(tags_query, index_type="tags", top_k=50)
+        
+        # Branch Filter (Hard Filter)
+        branch = parsed_needs.branch_needed
+        if branch and branch != "未提供":
+            bio_results = [(doc, score) for doc, score in bio_results if doc.profile.branch == branch]
+            tags_results = [(doc, score) for doc, score in tags_results if doc.profile.branch == branch]
+            
+        if not bio_results and not tags_results:
             return [], []
 
-        # Phase 1: Semantic Search (Retrieve candidates among filtered pool)
-        # Note: Indexer currently searches globally. We need to filter the results.
-        semantic_results = self.indexer.semantic_search(raw_query, top_k=20) # Get more to allow filtering
+        # Phase 1: Score Merging
+        # advisor_id -> [bio_score, tags_score]
+        scores_map = {}
+        docs_map = {}
         
-        # Filter semantic results by branch
-        if parsed_needs.branch_needed and parsed_needs.branch_needed != "未提供":
-            semantic_results = [(doc, score) for doc, score in semantic_results if doc.profile.branch == parsed_needs.branch_needed]
-        
-        # Take Top 10 from filtered semantic results
-        semantic_results = semantic_results[:10]
-        
-        ranked_docs = []
-        for doc, sem_score in semantic_results:
-            # Phase 2: Structured Scoring
-            struct_score = self._calculate_structured_score(doc.profile, parsed_needs)
+        for doc, score in bio_results:
+            aid = doc.profile.advisor_id
+            scores_map[aid] = [score, 0.0]
+            docs_map[aid] = doc
             
-            # Phase 3: Blended Score
-            # sem_score is cosine similarity. We treat it as the base.
-            # structured score (max 1.0) is multiplied by 0.1 as an additive bonus.
-            final_score = sem_score + (struct_score * self.STRUCTURED_WEIGHT)
-            ranked_docs.append((doc, final_score))
+        for doc, score in tags_results:
+            aid = doc.profile.advisor_id
+            if aid in scores_map:
+                scores_map[aid][1] = score
+            else:
+                scores_map[aid] = [0.0, score] # If not in bio top_k, bio score is 0
+                docs_map[aid] = doc
+                
+        # Phase 2: Combined Scoring (50/50) * 100
+        ranked_docs = []
+        for aid, (s_bio, s_tags) in scores_map.items():
+            # Average similarity * 100
+            final_score = ((s_bio * self.BIO_WEIGHT) + (s_tags * self.TAGS_WEIGHT)) * 100
+            ranked_docs.append((docs_map[aid], final_score))
             
         # Sort descending by final score
         ranked_docs.sort(key=lambda x: x[1], reverse=True)
-        return semantic_results, ranked_docs[:top_k]
+        
+        # Return (bio_top5, tags_top5, final_results)
+        return bio_results[:5], tags_results[:5], ranked_docs[:top_k]
