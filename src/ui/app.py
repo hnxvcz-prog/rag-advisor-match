@@ -90,11 +90,19 @@ selected_scale = st.sidebar.selectbox("💰 預計管理資產規模", ["不限"
 if docs:
     st.success(f"系統已準備就緒，共載入 **{len(docs)}** 份理專檔案。")
     
-    query = st.text_input("描述您滿意或不滿意的服務經歷：", placeholder="範例：我在尋找一位能為高資產客群進行退休規劃，且溝通風格溫和的理專")
+    query1 = st.text_input("描述您滿意或不滿意的服務經歷：", placeholder="範例：之前的理專很少主動聯繫，常常錯過市場機會。")
+    query2 = st.text_input("您心目中的理專，應該具備哪些特質或特長？", placeholder="範例：我在尋找一位能為高資產客群進行退休規劃，且溝通風格溫和的理專。")
     
-    if st.button("開始搜尋") and (query or selected_expertise or selected_clients or selected_branch != "所有分行"):
+    combined_query = ""
+    if query1:
+        combined_query += f"服務經歷：{query1}\n"
+    if query2:
+        combined_query += f"理想特質：{query2}"
+    combined_query = combined_query.strip()
+    
+    if st.button("開始搜尋") and (combined_query or selected_expertise or selected_clients or selected_branch != "所有分行"):
         # Handle empty query gracefully if tags are selected
-        effective_query = query if query else "搜尋符合特定條件的理專"
+        effective_query = combined_query if combined_query else "搜尋符合特定條件的理專"
         
         with st.spinner("正在分析您的需求並配對合適的理財顧問..."):
             # 1. Parse Query
@@ -136,7 +144,7 @@ if docs:
             
             # 1.5 Gatekeeper Check (Only if query was non-empty)
             is_relevant = getattr(parsed_needs, 'is_relevant', True)
-            if query and not is_relevant:
+            if combined_query and not is_relevant:
                 st.warning("⚠️ 系統偵測到無關查詢")
                 msg = getattr(parsed_needs, 'guidance_message', None)
                 if not msg or len(msg.strip()) < 5:
@@ -160,7 +168,7 @@ if docs:
                         st.write(f"- **{doc.profile.name}** ({sem_score:.4f})")
                     
             # 3. Generate Rationales
-            final_recommendations = generator.generate_recommendation_reasoning(query, parsed_needs, ranked_results)
+            final_recommendations = generator.generate_recommendation_reasoning(combined_query, parsed_needs, ranked_results)
             
             st.subheader("🏆 最佳推薦名單")
             for i, rec in enumerate(final_recommendations):
