@@ -69,7 +69,7 @@ st.title("🤝 RAG 理專智能媒合系統 v2.6")
 st.caption("核心更新：雙階段 RAG (自傳+標籤) 50/50 權重融合、客戶特徵多維度匹配")
 
 # We pass a version string to force-invalidate st.cache_resource if we update it
-query_parser, matcher, generator, docs, all_expertise, all_clients, all_styles, all_branches = load_system(version_tag="v2.6.5-dual-score-fix")
+query_parser, matcher, generator, docs, all_expertise, all_clients, all_styles, all_branches = load_system(version_tag="v2.8.5-sync-fix")
 
 # --- UI Sidebar for Tag Selection ---
 st.sidebar.header("🔍 理專需求型態")
@@ -107,10 +107,12 @@ if docs:
                 
             if selected_expertise:
                 # Union of LLM extracted and UI selected, de-duplicated
-                parsed_needs.expertise_needed = list(set(parsed_needs.expertise_needed + selected_expertise))
+                current_expertise = parsed_needs.expertise_needed or []
+                parsed_needs.expertise_needed = list(set(current_expertise + selected_expertise))
                 
-            if selected_clients:
-                parsed_needs.target_clients_needed = list(set(parsed_needs.target_clients_needed + selected_clients))
+            if selected_clients != "不限":
+                current_clients = parsed_needs.target_clients_needed or []
+                parsed_needs.target_clients_needed = list(set(current_clients + [selected_clients]))
                 
             if selected_style != "不限":
                 parsed_needs.communication_preference = selected_style
@@ -119,10 +121,12 @@ if docs:
                 parsed_needs.investment_experience = selected_exp
                 
             if selected_products:
-                parsed_needs.products_touched = list(set(parsed_needs.products_touched + selected_products))
+                current_products = parsed_needs.products_touched or []
+                parsed_needs.products_touched = list(set(current_products + selected_products))
                 
             if selected_alloc:
-                parsed_needs.asset_allocation = list(set(parsed_needs.asset_allocation + selected_alloc))
+                current_alloc = parsed_needs.asset_allocation or []
+                parsed_needs.asset_allocation = list(set(current_alloc + selected_alloc))
                 
             if selected_scale != "不限":
                 parsed_needs.asset_scale = selected_scale
