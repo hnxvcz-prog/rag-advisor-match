@@ -19,14 +19,16 @@ st.set_page_config(page_title="RAG Advisor Match", layout="wide")
 
 @st.cache_resource
 def load_system(version_tag: str):
-    # Attempt to load processed JSONs if they exist, otherwise initialize
-    processed_dir = Path("rag_agent/data/processed")
+    # Dynamically resolve paths relative to this script
+    PROJECT_ROOT = Path(__file__).parent.parent.parent
+    processed_dir = PROJECT_ROOT / "data" / "processed"
+    raw_dir = PROJECT_ROOT / "data" / "raw"
+    
     docs = []
     
-    # We add a print statement to see what's happening in logs
+    # Attempt to load processed JSONs if they exist
     if processed_dir.exists():
         files = list(processed_dir.glob("*.json"))
-        # Filter out any lingering temp files or non-json
         for fpath in files:
             try:
                 with open(fpath, "r", encoding="utf-8") as f:
@@ -35,13 +37,17 @@ def load_system(version_tag: str):
             except Exception as e:
                 print(f"Error loading {fpath}: {e}")
     
-    # If no processed data or we want to force re-parse
+    # If no processed data found, fall back to parsing raw Word files
     if not docs:
         st.info("Parsing raw Word files...")
-        parser = DocumentParser(raw_dir="rag_agent/data/raw", processed_dir="rag_agent/data/processed")
+        if not raw_dir.exists():
+            st.error(f"Raw data directory not found at {raw_dir}")
+            return None, None, None, [], [], [], [], []
+            
+        parser = DocumentParser(raw_dir=str(raw_dir), processed_dir=str(processed_dir))
         docs = parser.process_all()
         if not docs:
-            st.error("No documents found.")
+            st.error("No documents found in raw data directory.")
             return None, None, None, [], [], [], [], []
             
     indexer = Indexer()
