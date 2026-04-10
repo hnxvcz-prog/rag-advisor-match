@@ -173,11 +173,18 @@ if docs:
             
             st.subheader("🏆 最佳推薦名單")
             for i, rec in enumerate(final_recommendations):
+                # Retrieve corresponding FAISS and Reranker details
+                orig_data = next((x for x in ranked_results if x[0].profile.advisor_id == rec.advisor.advisor_id), None)
+                faiss_score = orig_data[3] if (orig_data and len(orig_data) > 3) else 0.0
+                rerank_data = orig_data[2] if (orig_data and len(orig_data) > 2) else None
+
                 st.markdown("---")
                 cols = st.columns([1, 2])
                 
                 with cols[0]:
-                    st.metric(label=f"#{i+1} 綜合配對得分 (0-100)", value=f"{rec.match_score:.1f}")
+                    st.metric(label=f"#{i+1} 最終覆核得分", value=f"{rec.match_score:.1f}", delta=f"FAISS初篩: {faiss_score:.1f}", delta_color="off")
+                    if rerank_data:
+                        st.caption(f"🧠 Reranker 評分判斷：\n- 軟性契合度: {rerank_data.bio_fit_score}\n- 專業契合度: {rerank_data.tag_fit_score}\n\n*({rerank_data.reasoning})*")
                     st.markdown(f"**姓名**: {rec.advisor.name}")
                     st.markdown(f"**專長**: {', '.join(rec.advisor.expertise)}")
                     st.markdown(f"**熟悉客群**: {', '.join(rec.advisor.target_clients)}")

@@ -18,3 +18,13 @@
 ## LLM Gateway
 - **Decision**: `langchain-openai`.
 - **Rationale**: Provides out-of-the-box support for RAG flows, embeddings generation, and structured outputs generation (Tool Calling / Structured Output APIs).
+
+## Future Optimization: Re-Ranking (Phase 2/3)
+- **Proposed Enhancement**: `Cross-Encoder Reranker` (e.g., Cohere Rerank, BGE-Reranker).
+- **Rationale**: Currently, Phase 1 relies on FAISS vector similarities (Dense Embeddings with Bi-Encoder logic), which merges the scores via mathematical average (50/50). A Cross-Encoder performs late-interaction processing by feeding both the `User Query` and the `Advisor Document` into the transformer simultaneously. This provides a much deeper, word-by-word semantic evaluation.
+- **Implementation Strategy**: 
+  1. Retrieve a broader initial pool (e.g., Top 10-20) from the FAISS indexing phase.
+  2. Implement mathematical hard filters (branch, asset scale).
+  3. Send the filtered pool to the API (like `Cohere Rerank`) or run a local lightweight model (`BAAI/bge-reranker-v2-m3`).
+  4. Yield the final Top 3 based on the fine-grained Cross-Encoder scoring.
+- **Expected Outcome**: Drastic improvement in retrieval precision, reducing cases where advisors are mismatched based purely on overlapping but contextually disconnected vocabulary.

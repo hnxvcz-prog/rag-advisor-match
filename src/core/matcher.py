@@ -1,13 +1,14 @@
 from typing import List, Tuple
 from ..models.schemas import AdvisorDocument, ParsedUserNeeds, RecommendationResult
+from .reranker import LLMReranker
 
 class Matcher:
     def __init__(self, indexer):
         self.indexer = indexer
-        # Weights (50/50 split as requested)
+        self.reranker = LLMReranker()
+        # Initial FAISS Weights
         self.BIO_WEIGHT = 0.5
         self.TAGS_WEIGHT = 0.5
-        
 
     def rank_advisors(self, raw_query: str, parsed_needs: ParsedUserNeeds, top_k: int = 3) -> Tuple[List[Tuple[AdvisorDocument, float]], List[Tuple[AdvisorDocument, float]], List[Tuple[AdvisorDocument, float]]]:
         # Phase 0: Retrieval from both indices
@@ -55,15 +56,28 @@ class Matcher:
                 scores_map[aid] = [0.0, score] # If not in bio top_k, bio score is 0
                 docs_map[aid] = doc
                 
-        # Phase 2: Combined Scoring (50/50) * 100
-        ranked_docs = []
+        # Phase 2: Combined FAISS Scoring (50/50) * 100
+        faiss_ranked_docs = []
         for aid, (s_bio, s_tags) in scores_map.items():
-            # Average similarity * 100
-            final_score = ((s_bio * self.BIO_WEIGHT) + (s_tags * self.TAGS_WEIGHT)) * 100
-            ranked_docs.append((docs_map[aid], final_score))
+            faiss_score = ((s_bio * self.BIO_WEIGHT) + (s_tags * self.TAGS_WEIGHT)) * 100
+            faiss_ranked_docs.append((docs_map[aid], faiss_score))
             
-        # Sort descending by final score
-        ranked_docs.sort(key=lambda x: x[1], reverse=True)
+        # Sort descending by FAISS score to get Top 10 for Reranking
+        faiss_ranked_docs.sort(key=lambda x: x[1], reverse=True)
+        top_candidates = faiss_ranked_docs[:10]
+        
+        # Phase 3: LLM Reranking (50% Bio / 50% Tags)
+        final_reranked_docs = []
+        for doc, faiss_score in top_candidates:
+            # Retrieve deep semantic LLM score
+            llm_res = self.reranker.score_document(raw_query, parsed_needs, doc)
+            # Apply strict 50/50 weighting per user request
+            final_match_score = (llm_res.bio_fit_score * 0.5) + (llm_res.tag_fit_score * 0.5)
+            # Store tuple of (doc, final_score, rerank_data, faiss_score)
+            final_reranked_docs.append((doc, final_match_score, llm_res, faiss_score))
+            
+        # Sort descending by Final LLM Rerank Score
+        final_reranked_docs.sort(key=lambda x: x[1], reverse=True)
         
         # Return (bio_top5, tags_top5, final_results)
-        return bio_results[:5], tags_results[:5], ranked_docs[:top_k]
+        return bio_results[:5], tags_results[:5], final_reranked_docs[:top_k]

@@ -54,7 +54,8 @@ class RationaleGenerator:
         chain = prompt | self.llm | self.parser
         
         contexts_str = ""
-        for doc, score in ranked_docs:
+        for item in ranked_docs:
+            doc, score = item[0], item[1]
             contexts_str += f"=== 理專檔案 ID: {doc.profile.advisor_id} (配對分數: {score:.2f}) ===\n"
             contexts_str += f"姓名: {doc.profile.name}\n"
             contexts_str += f"結構化特徵: 專長={doc.profile.expertise}, 目標客群={doc.profile.target_clients}, 溝通風格={doc.profile.communication_style}\n"
@@ -69,7 +70,8 @@ class RationaleGenerator:
             
             # Reconstruct RecommendationResults mapping LLM Pydantic objects to original objects
             final_results = []
-            for doc, score in ranked_docs:
+            for item in ranked_docs:
+                doc, score = item[0], item[1]
                 advisor_id = doc.profile.advisor_id
                 # Find corresponding generated rationale robustly (fallback to name match)
                 gen_data = next((
@@ -93,7 +95,7 @@ class RationaleGenerator:
             print(f"Generation error: {e}")
             # Fallback wrapper
             return [RecommendationResult(
-                advisor=d.profile, 
-                match_score=s, 
+                advisor=i[0].profile, 
+                match_score=i[1], 
                 rationale="系統已成功檢索到高分的理專檔案，但向語言模型請求推薦理由時發生錯誤或逾時。", 
-                citations=[]) for d, s in ranked_docs]
+                citations=[]) for i in ranked_docs]

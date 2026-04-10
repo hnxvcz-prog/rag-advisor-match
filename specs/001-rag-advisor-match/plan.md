@@ -5,7 +5,7 @@
 
 ## Summary
 
-This MVP validates the end-to-end pipeline of natural language advisor matching. The technical approach involves using Python for document processing (`python-docx`), Pydantic + LLM structured outputs to enforce JSON extraction of criteria from unstructured Word docs. For indexing, we will use in-memory `FAISS` with `langchain-openai` embeddings. A lightweight frontend will be built using `Streamlit` to collect user queries and render LLM-generated explanations alongside source evidence.
+This MVP validates the end-to-end pipeline of natural language advisor matching. The technical approach involves using Python for document processing (`python-docx`), Pydantic + LLM structured outputs to enforce JSON extraction of criteria from unstructured Word docs. For indexing, we will use in-memory `FAISS` with `langchain-openai` embeddings, splitting the vector space into 50% Autobiographical text and 50% metadata tags. A lightweight frontend will be built using `Streamlit` to collect dual user queries (Ideal Traits & Service Experience), optionally overlay sidebar metadata hard-filters, and render LLM-generated explanations alongside source evidence.
 
 ## Technical Context
 
