@@ -225,7 +225,7 @@ if st.session_state.page == "input":
         combined_q = combined_q.strip()
         
         # Explicitly mark empty descriptions to avoid LLM over-inference
-        effective_q = combined_q if combined_q else "[無手寫描述]"
+        effective_q = combined_q if combined_q else "[空值]"
         
         with st.status("正在進行深度媒合分析...", expanded=True) as status:
             st.write("1️⃣ 正在解析您的口語需求...")
